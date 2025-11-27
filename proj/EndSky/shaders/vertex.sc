@@ -1,60 +1,38 @@
-#version 310 es
-
 /*
 * Available Macros:
 *
 * Passes:
-* - ALPHA_TEST_PASS (not used)
-* - DEPTH_ONLY_PASS (not used)
-* - DEPTH_ONLY_OPAQUE_PASS (not used)
 * - OPAQUE_PASS (not used)
-* - TRANSPARENT_PASS
 *
 * Instancing:
 * - INSTANCING__OFF
 * - INSTANCING__ON
-*
-* RenderAsBillboards:
-* - RENDER_AS_BILLBOARDS__OFF (not used)
-* - RENDER_AS_BILLBOARDS__ON
-*
-* Seasons:
-* - SEASONS__OFF (not used)
-* - SEASONS__ON (not used)
 */
 
-#define attribute in
-#define varying out
-attribute vec4 a_color0;
-attribute vec3 a_position;
-attribute vec2 a_texcoord0;
-attribute vec2 a_texcoord1;
+$input a_color0, a_position, a_texcoord0
 #ifdef INSTANCING__ON
-attribute vec4 i_data1;
-attribute vec4 i_data2;
-attribute vec4 i_data3;
+$input i_data1, i_data2, i_data3
 #endif
-varying vec4 v_color0;
-varying vec4 v_fog;
-varying vec2 v_lightmapUV;
-centroid varying vec2 v_texcoord0;
-varying vec3 v_worldPos;
+$output v_color0, v_texcoord0, v_worldPos
+
+#include "include.h"
+
 struct NoopSampler {
     int noop;
 };
 
 #ifdef INSTANCING__ON
 vec3 instMul(vec3 _vec, mat3 _mtx) {
-    return ((_vec) * (_mtx));
+    return ((_vec) * (_mtx)); // Attention!
 }
 vec3 instMul(mat3 _mtx, vec3 _vec) {
-    return ((_mtx) * (_vec));
+    return ((_mtx) * (_vec)); // Attention!
 }
 vec4 instMul(vec4 _vec, mat4 _mtx) {
-    return ((_vec) * (_mtx));
+    return ((_vec) * (_mtx)); // Attention!
 }
 vec4 instMul(mat4 _mtx, vec4 _vec) {
-    return ((_mtx) * (_vec));
+    return ((_mtx) * (_vec)); // Attention!
 }
 #endif
 struct NoopImage2D {
@@ -73,29 +51,11 @@ struct accelerationStructureKHR {
     int noop;
 };
 
-uniform vec4 u_viewRect;
-uniform mat4 u_proj;
-uniform mat4 u_view;
-uniform vec4 u_viewTexel;
-uniform mat4 u_invView;
-uniform mat4 u_invProj;
-uniform mat4 u_viewProj;
-uniform mat4 u_invViewProj;
-uniform mat4 u_prevViewProj;
-uniform mat4 u_model[4];
-uniform mat4 u_modelView;
-uniform mat4 u_modelViewProj;
-uniform vec4 u_prevWorldPosOffset;
-uniform vec4 u_alphaRef4;
-uniform vec4 FogAndDistanceControl;
-uniform vec4 FogColor;
-uniform vec4 GlobalRoughness;
 uniform vec4 LightDiffuseColorAndIlluminance;
 uniform vec4 LightWorldSpaceDirection;
 uniform vec4 MaterialID;
-uniform vec4 RenderChunkFogAlpha;
-uniform vec4 SubPixelOffset;
-uniform vec4 ViewPositionAndTime;
+uniform vec4 SkyColor;
+uniform mat4 UV0Transform;
 vec4 ViewRect;
 mat4 Proj;
 mat4 View;
@@ -114,7 +74,6 @@ vec4 AlphaRef4;
 float AlphaRef;
 struct VertexInput {
     vec4 color0;
-    vec2 lightmapUV;
     vec3 position;
     vec2 texcoord0;
     #ifdef INSTANCING__ON
@@ -127,16 +86,12 @@ struct VertexInput {
 struct VertexOutput {
     vec4 position;
     vec4 color0;
-    vec4 fog;
-    vec2 lightmapUV;
     vec2 texcoord0;
     vec3 worldPos;
 };
 
 struct FragmentInput {
     vec4 color0;
-    vec4 fog;
-    vec2 lightmapUV;
     vec2 texcoord0;
     vec3 worldPos;
 };
@@ -145,15 +100,11 @@ struct FragmentOutput {
     vec4 Color0;
 };
 
-uniform lowp sampler2D s_LightMapTexture;
-uniform lowp sampler2D s_MatTexture;
-uniform lowp sampler2D s_SeasonsTexture;
+SAMPLER2D_AUTOREG(s_SkyTexture);
 struct StandardSurfaceInput {
     vec2 UV;
     vec3 Color;
     float Alpha;
-    vec2 lightmapUV;
-    vec4 fog;
     vec2 texcoord0;
 };
 
@@ -174,50 +125,6 @@ struct StandardSurfaceOutput {
     vec3 ViewSpaceNormal;
 };
 
-vec4 jitterVertexPosition(vec3 worldPosition) {
-    mat4 offsetProj = Proj;
-    offsetProj[2][0] += SubPixelOffset.x;
-    offsetProj[2][1] -= SubPixelOffset.y;
-    return ((offsetProj) * (((View) * (vec4(worldPosition, 1.0f)))));
-}
-float calculateFogIntensityFadedVanilla(float cameraDepth, float maxDistance, float fogStart, float fogEnd, float fogAlpha) {
-    float distance = cameraDepth / maxDistance;
-    distance += fogAlpha;
-    return clamp((distance - fogStart) / (fogEnd - fogStart), 0.0, 1.0);
-}
-#ifdef RENDER_AS_BILLBOARDS__ON
-void transformAsBillboardVertex(inout StandardVertexInput stdInput, inout VertexOutput vertOutput) {
-    stdInput.worldPos += vec3(0.5, 0.5, 0.5);
-    vec3 forward = normalize(stdInput.worldPos - ViewPositionAndTime.xyz);
-    vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), forward));
-    vec3 up = cross(forward, right);
-    vec3 offsets = stdInput.vertInput.color0.xyz;
-    stdInput.worldPos -= up * (offsets.z - 0.5) + right * (offsets.x - 0.5);
-    vertOutput.position = ((ViewProj) * (vec4(stdInput.worldPos, 1.0)));
-}
-#endif
-float RenderChunkVert(StandardVertexInput stdInput, inout VertexOutput vertOutput) {
-    #ifdef RENDER_AS_BILLBOARDS__ON
-    vertOutput.color0 = vec4(1.0, 1.0, 1.0, 1.0);
-    transformAsBillboardVertex(stdInput, vertOutput);
-    #endif
-    float cameraDepth = length(ViewPositionAndTime.xyz - stdInput.worldPos);
-    float fogIntensity = calculateFogIntensityFadedVanilla(cameraDepth, FogAndDistanceControl.z, FogAndDistanceControl.x, FogAndDistanceControl.y, RenderChunkFogAlpha.x);
-    vertOutput.fog = vec4(FogColor.rgb, fogIntensity);
-    vertOutput.position = jitterVertexPosition(stdInput.worldPos);
-    return cameraDepth;
-}
-#ifdef TRANSPARENT_PASS
-void RenderChunkVertTransparent(StandardVertexInput stdInput, inout VertexOutput vertOutput) {
-    float cameraDepth = RenderChunkVert(stdInput, vertOutput);
-    bool shouldBecomeOpaqueInTheDistance = stdInput.vertInput.color0.a < 0.95;
-    if (shouldBecomeOpaqueInTheDistance) {
-        float cameraDistance = cameraDepth / FogAndDistanceControl.w;
-        float alphaFadeOut = clamp(cameraDistance, 0.0, 1.0);
-        vertOutput.color0.a = mix(stdInput.vertInput.color0.a, 1.0, alphaFadeOut);
-    }
-}
-#endif
 struct CompositingOutput {
     vec3 mLitColor;
 };
@@ -225,7 +132,7 @@ struct CompositingOutput {
 void StandardTemplate_VertSharedTransform(inout StandardVertexInput stdInput, inout VertexOutput vertOutput) {
     VertexInput vertInput = stdInput.vertInput;
     #ifdef INSTANCING__OFF
-    vec3 wpos = ((World) * (vec4(vertInput.position, 1.0))).xyz;
+    vec3 wpos = ((World) * (vec4(vertInput.position, 1.0))).xyz; // Attention!
     #endif
     #ifdef INSTANCING__ON
     mat4 model;
@@ -235,11 +142,13 @@ void StandardTemplate_VertSharedTransform(inout StandardVertexInput stdInput, in
     model[3] = vec4(vertInput.instanceData0.w, vertInput.instanceData1.w, vertInput.instanceData2.w, 1);
     vec3 wpos = instMul(model, vec4(vertInput.position, 1.0)).xyz;
     #endif
-    vertOutput.position = ((ViewProj) * (vec4(wpos, 1.0)));
+    vertOutput.position = ((ViewProj) * (vec4(wpos, 1.0))); // Attention!
     stdInput.worldPos = wpos;
     vertOutput.worldPos = wpos;
 }
 void StandardTemplate_VertexPreprocessIdentity(VertexInput vertInput, inout VertexOutput vertOutput) {
+}
+void StandardTemplate_LightingVertexFunctionIdentity(VertexInput vertInput, inout VertexOutput vertOutput, vec3 worldPosition) {
 }
 
 void StandardTemplate_InvokeVertexPreprocessFunction(inout VertexInput vertInput, inout VertexOutput vertOutput);
@@ -250,8 +159,8 @@ struct DirectionalLight {
     vec3 Intensity;
 };
 
-void computeLighting_RenderChunk_Vertex(VertexInput vInput, inout VertexOutput vOutput, vec3 worldPosition) {
-    vOutput.lightmapUV = vInput.lightmapUV;
+void EndSkyVertOverride(in StandardVertexInput vertInput, inout VertexOutput vertOutput) {
+    vertOutput.texcoord0 = ((UV0Transform) * (vec4(vertInput.vertInput.texcoord0, 0, 1))).xy; // Attention!
 }
 void StandardTemplate_VertShared(VertexInput vertInput, inout VertexOutput vertOutput) {
     StandardTemplate_InvokeVertexPreprocessFunction(vertInput, vertOutput);
@@ -267,15 +176,10 @@ void StandardTemplate_InvokeVertexPreprocessFunction(inout VertexInput vertInput
     StandardTemplate_VertexPreprocessIdentity(vertInput, vertOutput);
 }
 void StandardTemplate_InvokeVertexOverrideFunction(StandardVertexInput vertInput, inout VertexOutput vertOutput) {
-    #ifndef TRANSPARENT_PASS
-    RenderChunkVert(vertInput, vertOutput);
-    #endif
-    #ifdef TRANSPARENT_PASS
-    RenderChunkVertTransparent(vertInput, vertOutput);
-    #endif
+    EndSkyVertOverride(vertInput, vertOutput);
 }
 void StandardTemplate_InvokeLightingVertexFunction(VertexInput vertInput, inout VertexOutput vertOutput, vec3 worldPosition) {
-    computeLighting_RenderChunk_Vertex(vertInput, vertOutput, worldPosition);
+    StandardTemplate_LightingVertexFunctionIdentity(vertInput, vertOutput, worldPosition);
 }
 void StandardTemplate_Opaque_Vert(VertexInput vertInput, inout VertexOutput vertOutput) {
     StandardTemplate_VertShared(vertInput, vertOutput);
@@ -284,7 +188,6 @@ void main() {
     VertexInput vertexInput;
     VertexOutput vertexOutput;
     vertexInput.color0 = (a_color0);
-    vertexInput.lightmapUV = (a_texcoord1);
     vertexInput.position = (a_position);
     vertexInput.texcoord0 = (a_texcoord0);
     #ifdef INSTANCING__ON
@@ -293,8 +196,6 @@ void main() {
     vertexInput.instanceData2 = i_data3;
     #endif
     vertexOutput.color0 = vec4(0, 0, 0, 0);
-    vertexOutput.fog = vec4(0, 0, 0, 0);
-    vertexOutput.lightmapUV = vec2(0, 0);
     vertexOutput.texcoord0 = vec2(0, 0);
     vertexOutput.worldPos = vec3(0, 0, 0);
     vertexOutput.position = vec4(0, 0, 0, 0);
@@ -321,8 +222,6 @@ void main() {
     AlphaRef = u_alphaRef4.x;
     StandardTemplate_Opaque_Vert(vertexInput, vertexOutput);
     v_color0 = vertexOutput.color0;
-    v_fog = vertexOutput.fog;
-    v_lightmapUV = vertexOutput.lightmapUV;
     v_texcoord0 = vertexOutput.texcoord0;
     v_worldPos = vertexOutput.worldPos;
     gl_Position = vertexOutput.position;

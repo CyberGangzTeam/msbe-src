@@ -4,23 +4,11 @@
 * Available Macros:
 *
 * Passes:
-* - ALPHA_TEST_PASS
-* - DEPTH_ONLY_PASS
-* - DEPTH_ONLY_OPAQUE_PASS
-* - OPAQUE_PASS
-* - TRANSPARENT_PASS
+* - TRANSPARENT_PASS (not used)
 *
 * Instancing:
 * - INSTANCING__OFF (not used)
 * - INSTANCING__ON
-*
-* RenderAsBillboards:
-* - RENDER_AS_BILLBOARDS__OFF (not used)
-* - RENDER_AS_BILLBOARDS__ON (not used)
-*
-* Seasons:
-* - SEASONS__OFF
-* - SEASONS__ON
 */
 
 #if GL_FRAGMENT_PRECISION_HIGH
@@ -32,10 +20,11 @@ precision mediump float;
 #define varying in
 out vec4 bgfx_FragColor;
 varying vec4 v_color0;
-varying vec4 v_fog;
-varying vec2 v_lightmapUV;
-centroid varying vec2 v_texcoord0;
+varying vec2 v_texcoord0;
 varying vec3 v_worldPos;
+
+#include "include.h"
+
 struct NoopSampler {
     int noop;
 };
@@ -79,11 +68,6 @@ vec4 textureSample(NoopSampler noopsampler, vec3 _coord, float _lod) {
 vec4 textureSample(NoopSampler noopsampler, vec4 _coord, float _lod) {
     return vec4(0, 0, 0, 0);
 }
-#if defined(SEASONS__ON)&&(defined(ALPHA_TEST_PASS)|| defined(OPAQUE_PASS))
-vec3 vec3_splat(float _x) {
-    return vec3(_x, _x, _x);
-}
-#endif
 struct NoopImage2D {
     int noop;
 };
@@ -114,15 +98,10 @@ uniform mat4 u_modelView;
 uniform mat4 u_modelViewProj;
 uniform vec4 u_prevWorldPosOffset;
 uniform vec4 u_alphaRef4;
-uniform vec4 FogAndDistanceControl;
-uniform vec4 FogColor;
-uniform vec4 GlobalRoughness;
 uniform vec4 LightDiffuseColorAndIlluminance;
 uniform vec4 LightWorldSpaceDirection;
 uniform vec4 MaterialID;
-uniform vec4 RenderChunkFogAlpha;
-uniform vec4 SubPixelOffset;
-uniform vec4 ViewPositionAndTime;
+uniform vec4 SunMoonColor;
 vec4 ViewRect;
 mat4 Proj;
 mat4 View;
@@ -141,7 +120,6 @@ vec4 AlphaRef4;
 float AlphaRef;
 struct VertexInput {
     vec4 color0;
-    vec2 lightmapUV;
     vec3 position;
     vec2 texcoord0;
     #ifdef INSTANCING__ON
@@ -154,16 +132,12 @@ struct VertexInput {
 struct VertexOutput {
     vec4 position;
     vec4 color0;
-    vec4 fog;
-    vec2 lightmapUV;
     vec2 texcoord0;
     vec3 worldPos;
 };
 
 struct FragmentInput {
     vec4 color0;
-    vec4 fog;
-    vec2 lightmapUV;
     vec2 texcoord0;
     vec3 worldPos;
 };
@@ -172,15 +146,11 @@ struct FragmentOutput {
     vec4 Color0;
 };
 
-uniform lowp sampler2D s_LightMapTexture;
-uniform lowp sampler2D s_MatTexture;
-uniform lowp sampler2D s_SeasonsTexture;
+uniform lowp sampler2D s_SunMoonTexture;
 struct StandardSurfaceInput {
     vec2 UV;
     vec3 Color;
     float Alpha;
-    vec2 lightmapUV;
-    vec4 fog;
     vec2 texcoord0;
 };
 
@@ -194,8 +164,6 @@ StandardSurfaceInput StandardTemplate_DefaultInput(FragmentInput fragInput) {
     result.UV = vec2(0, 0);
     result.Color = vec3(1, 1, 1);
     result.Alpha = 1.0;
-    result.lightmapUV = fragInput.lightmapUV;
-    result.fog = fragInput.fog;
     result.texcoord0 = fragInput.texcoord0;
     return result;
 }
@@ -224,37 +192,14 @@ StandardSurfaceOutput StandardTemplate_DefaultOutput() {
     result.ViewSpaceNormal = vec3(0, 1, 0);
     return result;
 }
-vec3 applyFogVanilla(vec3 diffuse, vec3 fogColor, float fogIntensity) {
-    return mix(diffuse, fogColor, fogIntensity);
-}
-#if defined(SEASONS__ON)&&(defined(ALPHA_TEST_PASS)|| defined(OPAQUE_PASS))
-vec4 applySeasons(vec3 vertexColor, float vertexAlpha, vec4 diffuse) {
-    vec2 uv = vertexColor.xy;
-    diffuse.rgb *= mix(vec3(1.0, 1.0, 1.0), textureSample(s_SeasonsTexture, uv).rgb * 2.0, vertexColor.b);
-    diffuse.rgb *= vec3_splat(vertexAlpha);
-    diffuse.a = 1.0;
-    return diffuse;
-}
-#endif
-void RenderChunkApplyFog(FragmentInput fragInput, StandardSurfaceInput surfaceInput, StandardSurfaceOutput surfaceOutput, inout FragmentOutput fragOutput) {
-    fragOutput.Color0.rgb = applyFogVanilla(fragOutput.Color0.rgb, FogColor.rgb, surfaceInput.fog.a);
-}
-#ifdef TRANSPARENT_PASS
-void RenderChunkSurfTransparent(in StandardSurfaceInput surfaceInput, inout StandardSurfaceOutput surfaceOutput) {
-    vec4 diffuse = textureSample(s_MatTexture, surfaceInput.UV);
-    diffuse.a *= surfaceInput.Alpha;
-    diffuse.rgb *= surfaceInput.Color.rgb;
-    surfaceOutput.Albedo = diffuse.rgb;
-    surfaceOutput.Alpha = diffuse.a;
-    surfaceOutput.Roughness = GlobalRoughness.x;
-}
-#endif
 struct CompositingOutput {
     vec3 mLitColor;
 };
 
 vec4 standardComposite(StandardSurfaceOutput stdOutput, CompositingOutput compositingOutput) {
     return vec4(compositingOutput.mLitColor, stdOutput.Alpha);
+}
+void StandardTemplate_FinalColorOverrideIdentity(FragmentInput fragInput, StandardSurfaceInput surfaceInput, StandardSurfaceOutput surfaceOutput, inout FragmentOutput fragOutput) {
 }
 void StandardTemplate_CustomSurfaceShaderEntryIdentity(vec2 uv, vec3 worldPosition, inout StandardSurfaceOutput surfaceOutput) {
 }
@@ -263,79 +208,36 @@ struct DirectionalLight {
     vec3 Intensity;
 };
 
-vec3 computeLighting_RenderChunk(FragmentInput fragInput, StandardSurfaceInput stdInput, StandardSurfaceOutput stdOutput, DirectionalLight primaryLight) {
-    return textureSample(s_LightMapTexture, stdInput.lightmapUV).rgb * stdOutput.Albedo;
+vec3 computeLighting_Unlit(FragmentInput fragInput, StandardSurfaceInput stdInput, StandardSurfaceOutput stdOutput, DirectionalLight primaryLight) {
+    return stdOutput.Albedo;
 }
-#if defined(ALPHA_TEST_PASS)|| defined(DEPTH_ONLY_PASS)
-void RenderChunkSurfAlpha(in StandardSurfaceInput surfaceInput, inout StandardSurfaceOutput surfaceOutput) {
-    vec4 diffuse = textureSample(s_MatTexture, surfaceInput.UV);
-    const float ALPHA_THRESHOLD = 0.5;
-    if (diffuse.a < ALPHA_THRESHOLD) {
-        discard;
-    }
-    #if defined(ALPHA_TEST_PASS)&& defined(SEASONS__OFF)
-    diffuse.rgb *= surfaceInput.Color.rgb;
-    #endif
-    #if defined(ALPHA_TEST_PASS)&& defined(SEASONS__ON)
-    diffuse = applySeasons(surfaceInput.Color, surfaceInput.Alpha, diffuse);
-    #endif
-    #ifdef ALPHA_TEST_PASS
+void SunMoonSurface(in StandardSurfaceInput surfaceInput, inout StandardSurfaceOutput surfaceOutput) {
+    vec4 diffuse = SunMoonColor;
+    diffuse *= textureSample(s_SunMoonTexture, surfaceInput.texcoord0);
     surfaceOutput.Albedo = diffuse.rgb;
     surfaceOutput.Alpha = diffuse.a;
-    surfaceOutput.Roughness = GlobalRoughness.x;
-    #endif
 }
-#endif
-#if defined(DEPTH_ONLY_OPAQUE_PASS)|| defined(OPAQUE_PASS)
-void RenderChunkSurfOpaque(in StandardSurfaceInput surfaceInput, inout StandardSurfaceOutput surfaceOutput) {
-    #ifdef OPAQUE_PASS
-    vec4 diffuse = textureSample(s_MatTexture, surfaceInput.UV);
-    #endif
-    #if defined(OPAQUE_PASS)&& defined(SEASONS__OFF)
-    diffuse.rgb *= surfaceInput.Color.rgb;
-    diffuse.a = surfaceInput.Alpha;
-    #endif
-    #if defined(OPAQUE_PASS)&& defined(SEASONS__ON)
-    diffuse = applySeasons(surfaceInput.Color, surfaceInput.Alpha, diffuse);
-    #endif
-    #ifdef OPAQUE_PASS
-    surfaceOutput.Albedo = diffuse.rgb;
-    surfaceOutput.Alpha = diffuse.a;
-    surfaceOutput.Roughness = GlobalRoughness.x;
-    #endif
-}
-#endif
 void StandardTemplate_Opaque_Frag(FragmentInput fragInput, inout FragmentOutput fragOutput) {
     StandardSurfaceInput surfaceInput = StandardTemplate_DefaultInput(fragInput);
     StandardSurfaceOutput surfaceOutput = StandardTemplate_DefaultOutput();
     surfaceInput.UV = fragInput.texcoord0;
     surfaceInput.Color = fragInput.color0.xyz;
     surfaceInput.Alpha = fragInput.color0.a;
-    #if defined(ALPHA_TEST_PASS)|| defined(DEPTH_ONLY_PASS)
-    RenderChunkSurfAlpha(surfaceInput, surfaceOutput);
-    #endif
-    #if defined(DEPTH_ONLY_OPAQUE_PASS)|| defined(OPAQUE_PASS)
-    RenderChunkSurfOpaque(surfaceInput, surfaceOutput);
-    #endif
-    #ifdef TRANSPARENT_PASS
-    RenderChunkSurfTransparent(surfaceInput, surfaceOutput);
-    #endif
+    SunMoonSurface(surfaceInput, surfaceOutput);
     StandardTemplate_CustomSurfaceShaderEntryIdentity(surfaceInput.UV, fragInput.worldPos, surfaceOutput);
     DirectionalLight primaryLight;
     vec3 worldLightDirection = LightWorldSpaceDirection.xyz;
     primaryLight.ViewSpaceDirection = ((View) * (vec4(worldLightDirection, 0))).xyz;
     primaryLight.Intensity = LightDiffuseColorAndIlluminance.rgb * LightDiffuseColorAndIlluminance.w;
     CompositingOutput compositingOutput;
-    compositingOutput.mLitColor = computeLighting_RenderChunk(fragInput, surfaceInput, surfaceOutput, primaryLight);
+    compositingOutput.mLitColor = computeLighting_Unlit(fragInput, surfaceInput, surfaceOutput, primaryLight);
     fragOutput.Color0 = standardComposite(surfaceOutput, compositingOutput);
-    RenderChunkApplyFog(fragInput, surfaceInput, surfaceOutput, fragOutput);
+    StandardTemplate_FinalColorOverrideIdentity(fragInput, surfaceInput, surfaceOutput, fragOutput);
 }
 void main() {
     FragmentInput fragmentInput;
     FragmentOutput fragmentOutput;
     fragmentInput.color0 = v_color0;
-    fragmentInput.fog = v_fog;
-    fragmentInput.lightmapUV = v_lightmapUV;
     fragmentInput.texcoord0 = v_texcoord0;
     fragmentInput.worldPos = v_worldPos;
     fragmentOutput.Color0 = vec4(0, 0, 0, 0);

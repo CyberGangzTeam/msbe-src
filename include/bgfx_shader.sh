@@ -659,11 +659,6 @@ vec4  mod(vec4  _a, vec4  _b) { return _a - _b * floor(_a / _b); }
 //		define shadow2DArray(_sampler, _coord)
 #	endif // BGFX_SHADER_LANGUAGE_GLSL >= 130
 
-vec3 instMul(vec3 _vec, mat3 _mtx) { return mul(_vec, _mtx); }
-vec3 instMul(mat3 _mtx, vec3 _vec) { return mul(_mtx, _vec); }
-vec4 instMul(vec4 _vec, mat4 _mtx) { return mul(_vec, _mtx); }
-vec4 instMul(mat4 _mtx, vec4 _vec) { return mul(_mtx, _vec); }
-
 float rcp(float _a) { return 1.0/_a; }
 vec2  rcp(vec2  _a) { return vec2(1.0)/_a; }
 vec3  rcp(vec3  _a) { return vec3(1.0)/_a; }

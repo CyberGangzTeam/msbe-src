@@ -22,6 +22,9 @@
 */
 
 $input v_color0, v_fog, v_lightmapUV, v_texcoord0, v_worldPos
+
+#include "include.h"
+
 struct NoopSampler {
     int noop;
 };
@@ -65,11 +68,6 @@ vec4 textureSample(NoopSampler noopsampler, vec3 _coord, float _lod) {
 vec4 textureSample(NoopSampler noopsampler, vec4 _coord, float _lod) {
     return vec4(0, 0, 0, 0);
 }
-#if defined(SEASONS__ON)&&(defined(ALPHA_TEST_PASS)|| defined(OPAQUE_PASS))
-vec3 vec3_splat(float _x) {
-    return vec3(_x, _x, _x);
-}
-#endif
 struct NoopImage2D {
     int noop;
 };

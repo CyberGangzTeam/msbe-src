@@ -60,7 +60,9 @@ while [[ $# -gt 0 ]]; do
             echo "Starting packing for platform: $PLATFORM..."
 
             if [ -f "$TARGET_SCRIPT" ]; then
-                bash "$TARGET_SCRIPT" "$PLATFORM"
+                if [ "$PLATFORM" == "android" ]; then
+                    bash scripts/bash/pack.sh --pack android
+                fi
             else
                 echo "Error: Script '$TARGET_SCRIPT' not found."
             fi
