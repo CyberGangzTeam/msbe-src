@@ -5,8 +5,9 @@
 - iOS (soon)
 - Windows (soon)
 ## Main Developer
-- [ngmvix2010](https://github.com/ngmvix2010)
-- [JaggerFinn](https://github.com/JaggerFinn)
+- [ngmvix2010](https://github.com/ngmvix2010) - Dựng build tool, source code, và nền tảng ban đầu cho shader
+- [JaggerFinn](https://github.com/JaggerFinn) - Phát triển hiệu ứng phụ cho shader, và đòi nợ msbe (up link 99m) 🫩💔✌️🐧
+- [congcg](https://github.com/congcq) - Thêm phần hỗ trợ build cho iOS
 
 ## Install Depends
 
