@@ -22,6 +22,18 @@ while [[ $# -gt 0 ]]; do
     key="$1"
 
     case $key in
+        --setup)
+            TARGET_SCRIPT="$SCRIPT_BASE/setup.sh"
+            echo "Starting environment setup..."
+            if [ -f "$TARGET_SCRIPT" ]; then
+                bash "$TARGET_SCRIPT"
+            else
+                echo "Error: Script '$TARGET_SCRIPT' not found." >&2
+            fi
+            
+            shift
+            ;;
+
         --subpack)
             ACTION="$2"
             if [ -z "$ACTION" ]; then
@@ -47,8 +59,7 @@ while [[ $# -gt 0 ]]; do
                 echo "Error: Script '$TARGET_SCRIPT' not found."
             fi
             
-            shift
-            shift
+            shift 2
             ;;
 
         --pack)
@@ -74,11 +85,13 @@ while [[ $# -gt 0 ]]; do
                 echo "Error: Script '$TARGET_SCRIPT' not found."
             fi
 
-            shift
-            shift
+            shift 2
             ;;
+
         --mats)
-            echo ""
+            shift
+            bash "$SCRIPT_BASE/mats.sh" "$@"
+            exit 0
             ;;
 
         --help)

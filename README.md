@@ -14,25 +14,37 @@
 ### Ubuntu && Debian based
 
 ```
-sudo apt install git python3 python3-pip
+sudo apt install git python3 python3-pip wget
 ```
 
 ### Fedora based
 
 ```
-sudo dnf install git python3 python3-pip
+sudo dnf install git python3 python3-pip wget
 ```
 
 ### Arch Linux based
 
 ```
-sudo pacman -S git python python-pip
+sudo pacman -S git python python-pip wget
+```
+
+### MacOS
+**On MacOS, you should use home brew to install these tool.**
+```
+brew install git wget python
+```
+
+### Windows (Support soon!)
+**On Windows, open cmd or PowerShell and use winget.**
+```
+winget install --id Git.Git -e --id Python.Python.3 -e --id GNU.Wget2 -e
 ```
 
 ### Android (Termux)
 
 ```
-pkg install git python3 python3-pip
+pkg install git python3 python3-pip curl
 ```
 
 ### iOS
@@ -40,7 +52,7 @@ For iOS environment, currently require jailbreak. Both rootful and rootless are 
 
 - Add [CongChu's Repository](https://congcq.github.io) to Sileo/Zebra
 
-- Find and install Terminal, git and python3.12
+- Find and install Terminal, git, curl and python3.12
 
 - Open Terminal, run: `sudo python -m ensurepip --upgrade`
 
@@ -89,7 +101,15 @@ sudo vtool -arch arm64 -set-build-version 2 14.0 16.0 -replace -output $PYMP/Cry
 
 ## How to build
 
-**This build script only support Linux and iOS. Android, Windows support soon.**
+**This build script only support Linux, MacOS, Android and iOS. Windows support soon.**
+
+### Platforms can use this build script
+
+- Linux
+
+- MacOS
+
+- Android
 
 ### Main file script:
 ```
@@ -112,7 +132,7 @@ sudo vtool -arch arm64 -set-build-version 2 14.0 16.0 -replace -output $PYMP/Cry
 ./build.sh --help
 ```
 
-#### Setup (soon)
+#### Setup (Testing)
 
 ```
 ./build.sh --setup
