@@ -26,7 +26,7 @@ sudo dnf install git python3 python3-pip
 ### Arch Linux based
 
 ```
-sudo pacman -S git python
+sudo pacman -S git python python-pip
 ```
 
 ### Android (Termux)
@@ -46,7 +46,7 @@ For iOS environment, currently require jailbreak. Both rootful and rootless are 
 
 ## Install lazurite
 
-Run:
+### Run:
 
 ```
 pip install rich lazurite
@@ -56,7 +56,7 @@ or
 python -m pip install rich lazurite
 ```
 
-For Linux (maybe you need it):
+### For Linux (maybe you need it):
 
 ```
 pip install --break-system-packages rich lazurite
@@ -66,7 +66,7 @@ or
 python -m pip install --break-system-packages rich lazurite
 ```
 
-For iOS:
+### For iOS:
 
 ```
 sudo pip install rich lazurite
@@ -99,11 +99,12 @@ sudo vtool -arch arm64 -set-build-version 2 14.0 16.0 -replace -output $PYMP/Cry
 ```
 ./build.sh [OPTIONS]
 
-"Options:"
-    "  --subpack [action]                      Run subpack script (e.g., create, remove)"
-    "  --pack [platform]                       Run packaging script (e.g., android, ios)"
-    "  --build -m [material] -p [platform]     build material for platform (e.g., android, ios)"
-    "  --help                                  Show this help message"
+    "Options:"
+    "  --setup                                             Run setup env"
+    "  --subpack [action]                                  Run configuration script (e.g., create, remove, list)"
+    "  --pack [platform]                                   Run packaging script (e.g., android, ios)"
+    "  --mats -m [material] -p [platform] -s [subpack]     build material for platform (e.g., android, ios)"
+    "  --help                                              Show this help message"
 ```
 #### Show help:
 

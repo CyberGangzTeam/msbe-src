@@ -6,10 +6,11 @@ show_help() {
     echo "Usage: ./build.sh [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  --config [action]                       Run configuration script (e.g., create)"
-    echo "  --pack [platform]                       Run packaging script (e.g., android, ios)"
-    echo "  --build -m [material] -p [platform]     build material for platform (e.g., android, ios)"
-    echo "  --help                                  Show this help message"
+    echo "  --setup                                             Run setup env"
+    echo "  --subpack [action]                                  Run configuration script (e.g., create, remove, list)"
+    echo "  --pack [platform]                                   Run packaging script (e.g., android, ios)"
+    echo "  --mats -m [material] -p [platform] -s [subpack]     build material for platform (e.g., android, ios)"
+    echo "  --help                                              Show this help message"
 }
 
 if [ $# -eq 0 ]; then
@@ -32,11 +33,13 @@ while [[ $# -gt 0 ]]; do
                 TARGET_SCRIPT="$SCRIPT_BASE/create_subpack.sh"
             elif [ "$ACTION" == "remove" ]; then
                 TARGET_SCRIPT="$SCRIPT_BASE/remove_subpack.sh"
+            elif [ "$ACTION" == "list" ]; then
+                TARGET_SCRIPT="$SCRIPT_BASE/list_subpack.sh"
             else
                 echo "Error: unknown command"
             fi
 
-            echo "Starting create subpack: $ACTION..."
+            echo "Starting $ACTION subpack..."
             
             if [ -f "$TARGET_SCRIPT" ]; then
                 bash "$TARGET_SCRIPT"
@@ -62,6 +65,10 @@ while [[ $# -gt 0 ]]; do
             if [ -f "$TARGET_SCRIPT" ]; then
                 if [ "$PLATFORM" == "android" ]; then
                     bash scripts/bash/pack.sh --pack android
+                elif [ "$PLATFORM" == "ios" ]; then
+                    bash scripts/bash/pack.sh --pack ios
+                elif [ "$PLATFORM" == "windows" ]; then
+                    bash scripts/bash/pack.sh --pack windows
                 fi
             else
                 echo "Error: Script '$TARGET_SCRIPT' not found."
@@ -69,6 +76,9 @@ while [[ $# -gt 0 ]]; do
 
             shift
             shift
+            ;;
+        --mats)
+            echo ""
             ;;
 
         --help)
