@@ -104,12 +104,10 @@ sudo vtool -arch arm64 -set-build-version 2 14.0 16.0 -replace -output $PYMP/Cry
 **This build script only support Linux, MacOS, Android and iOS. Windows support soon.**
 
 ### Platforms can use this build script
-
 - Linux
-
 - MacOS
-
 - Android
+- iOS
 
 ### Main file script:
 ```

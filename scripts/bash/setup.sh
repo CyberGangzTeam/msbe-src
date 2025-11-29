@@ -73,4 +73,14 @@ if [ ! -f "$EXECUTABLE_PATH" ] && [ ! -f "$SHADERC_PATH" ]; then
     exit 1
 fi
 
+if [ "$PLATFORM" == "android" ]; then
+    echo "fix libc++_shared.so for android"
+    mkdir -p ~/.local/lib/
+    cp /data/data/com.termux/files/usr/lib/libc++_shared.so ~/.local/lib/
+    cp /data/data/com.termux/files/usr/lib/libc++_shared.so env/
+    echo "export LD_LIBRARY_PATH='$HOME/.local/lib:$LD_LIBRARY_PATH'" >> ~/.bashrc
+    echo "export LD_LIBRARY_PATH='env/:$LD_LIBRARY_PATH'" >> ~/.bashrc
+    echo "run 'source ~/.bashrc' to apply path"
+fi
+
 echo "Setup completed successfully."

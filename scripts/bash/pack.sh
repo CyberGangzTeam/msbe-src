@@ -17,7 +17,7 @@ while [[ $# -gt 0 ]]; do
                 rm -rf out/platform/android
                 sleep 0.5
                 echo "creating out pack dir..."
-                mkdir -p out/platform/android/pack
+                mkdir -p out/platform/android/pack/renderer/materials
                 sleep 0.1
                 echo "copy pack assets to out pack dir..."
                 cp -r assets/main/* out/platform/android/pack/
@@ -83,7 +83,7 @@ while [[ $# -gt 0 ]]; do
                 rm -rf out/platform/ios
                 sleep 0.5
                 echo "creating out pack dir..."
-                mkdir -p out/platform/ios/pack
+                mkdir -p out/platform/ios/pack/renderer/materials
                 sleep 0.1
                 echo "copy pack assets to out pack dir..."
                 cp -r assets/main/* out/platform/ios/pack/
@@ -147,7 +147,7 @@ while [[ $# -gt 0 ]]; do
                 rm -rf out/platform/windows
                 sleep 0.5
                 echo "creating out pack dir..."
-                mkdir -p out/platform/windows/pack
+                mkdir -p out/platform/windows/pack/renderer/materials
                 sleep 0.1
                 echo "copy pack assets to out pack dir..."
                 cp -r assets/main/* out/platform/windows/pack/
