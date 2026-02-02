@@ -1,7 +1,7 @@
 # Miration Shader Bedrock Edition (MSBE)
 - A custom Render Dragon shader for minecraft bedrock edition make by CyberGangz Studio.
 ## Supported platform
-- Android
+- Android (Including MacOS and Linux)
 - iOS (Jailbreak only)
 - Windows (soon)
 ## Main Developer
@@ -35,7 +35,7 @@ sudo pacman -S git python python-pip wget
 brew install git wget python
 ```
 
-### Windows (Support soon!)
+### Windows (Not yet)
 **On Windows, open cmd or PowerShell and use winget.**
 ```
 winget install --id Git.Git -e --id Python.Python.3 -e --id GNU.Wget2 -e
@@ -130,7 +130,7 @@ sudo vtool -arch arm64 -set-build-version 2 14.0 16.0 -replace -output $PYMP/Cry
 ./build.sh --help
 ```
 
-#### Setup (Testing)
+#### Setup
 
 ```
 ./build.sh --setup
