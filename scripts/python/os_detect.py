@@ -7,11 +7,10 @@ if platform.system() == "Darwin":
         print("ios")
     else:
         print("macos")
+elif platform.system() == "Android":
+    print("android")
 elif platform.system() == "Linux":
-    if os.path.exists('/system/build.prop'):
-        print("android")
-    else:
-        print("linux")
+    print("linux")
 elif platform.system() == "Windows":
     print("windows")
 else:
