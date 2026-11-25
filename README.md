@@ -135,6 +135,7 @@ sudo vtool -arch arm64 -set-build-version 2 14.0 16.0 -replace -output $PYMP/Cry
 ```
 ./build.sh --setup
 ```
+this repo will be rebase in the future!
 
 #### Build pack:
 
